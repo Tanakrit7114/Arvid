@@ -140,7 +140,7 @@ const Dashboard = () => {
 
       const handleMessage = async (event: MessageEvent) => {
         if (event.data?.type === 'DISCORD_AUTH_SUCCESS') {
-          const { accessToken, refreshToken, expiresIn } = event.data;
+          const { accessToken, refreshToken, expiresIn, discordId } = event.data;
           const expiresAt = Date.now() + (expiresIn * 1000);
 
           // Save to Firestore
@@ -148,7 +148,8 @@ const Dashboard = () => {
             await updateDoc(doc(db, 'users', user!.uid), {
               discordAccessToken: accessToken,
               discordRefreshToken: refreshToken,
-              discordTokenExpiresAt: expiresAt
+              discordTokenExpiresAt: expiresAt,
+              discordId: discordId
             });
             
             setDiscordAccessToken(accessToken);
@@ -338,7 +339,7 @@ const Dashboard = () => {
                           to={`/manage/${server.id}`}
                           className="flex-1 py-3 bg-accent text-white border border-accent rounded-2xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-accent/90 transition-all shadow-lg shadow-accent/20"
                         >
-                          Manage
+                          Manage Server
                           <Settings size={16} />
                         </Link>
                       ) : (

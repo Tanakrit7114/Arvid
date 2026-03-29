@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import ManageServer from './pages/ManageServer';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -38,6 +39,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/manage/:guildId" 
+              element={
+                <ProtectedRoute>
+                  <ManageServer />
                 </ProtectedRoute>
               } 
             />

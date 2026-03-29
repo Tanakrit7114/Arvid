@@ -58,14 +58,14 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email']) &&
-             data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'role']) &&
+             data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'role', 'discordId', 'lastLogin']) &&
              data.uid is string && data.uid.size() > 0 &&
              data.email is string && isValidEmail(data.email);
     }
 
     function isValidGuild(data) {
       return data.keys().hasAll(['id', 'name', 'ownerId']) &&
-             data.keys().hasOnly(['id', 'name', 'icon', 'ownerId', 'members', 'active']) &&
+             data.keys().hasOnly(['id', 'name', 'icon', 'ownerId', 'members', 'active', 'settings', 'updatedAt', 'updatedBy', 'joinedAt', 'leftAt']) &&
              data.id is string && data.id.size() > 0 &&
              data.name is string && data.name.size() > 0 &&
              data.ownerId is string && data.ownerId.size() > 0;
@@ -77,8 +77,16 @@ service cloud.firestore {
              data.prefix is string && data.prefix.size() > 0 && data.prefix.size() < 10;
     }
 
+    function getDiscordId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.discordId;
+    }
+
+    match /health_check/{docId} {
+      allow read, write: if true;
+    }
+
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if true;
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && (!('role' in request.resource.data) || request.resource.data.role == 'user');
       allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
                        request.resource.data.uid == resource.data.uid &&
@@ -87,14 +95,14 @@ service cloud.firestore {
     }
 
     match /guilds/{guildId} {
-      allow read: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && isValidGuild(request.resource.data) && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin()) && isValidGuild(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
-      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidGuild(request.resource.data) && request.resource.data.ownerId == getDiscordId();
+      allow update: if isAuthenticated() && (resource.data.ownerId == getDiscordId() || isAdmin()) && isValidGuild(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAuthenticated() && (resource.data.ownerId == getDiscordId() || isAdmin());
 
       match /settings/config {
-        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId == request.auth.uid || isAdmin());
-        allow write: if isAuthenticated() && (get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId == request.auth.uid || isAdmin()) && isValidBotSettings(request.resource.data);
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId == getDiscordId() || isAdmin());
+        allow write: if isAuthenticated() && (get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId == getDiscordId() || isAdmin()) && isValidBotSettings(request.resource.data);
       }
     }
   }

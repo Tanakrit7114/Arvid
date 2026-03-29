@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { auth, googleProvider } from '../firebase';
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, googleProvider, db } from '../firebase';
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signInWithCustomToken } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { LogIn, UserPlus, Mail, Lock, User as UserIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +23,47 @@ const Login = () => {
     }
   }, [user, navigate]);
 
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      // Validate origin is from AI Studio preview or localhost
+      const origin = event.origin;
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+        return;
+      }
+
+      if (event.data?.type === 'DISCORD_LOGIN_SUCCESS') {
+        const { customToken, userData } = event.data;
+        setLoading(true);
+        setError('');
+        try {
+          await signInWithCustomToken(auth, customToken);
+          
+          // Sync user data on client side where we have permission
+          if (userData) {
+            try {
+              await setDoc(doc(db, "users", userData.uid), {
+                ...userData,
+                lastLogin: new Date().toISOString()
+              }, { merge: true });
+            } catch (fsError) {
+              console.error("Client Firestore User Sync Error:", fsError);
+            }
+          }
+          
+          navigate('/dashboard');
+        } catch (err: any) {
+          console.error("Firebase Custom Token Login Error:", err);
+          setError(`Login Failed: ${err.message}`);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [navigate]);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
@@ -32,6 +74,21 @@ const Login = () => {
       console.error("Google Login Error:", err);
       setError(`${err.code || 'Error'}: ${err.message}`);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDiscordLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/auth/discord/login-url');
+      const { url } = await response.json();
+      
+      window.open(url, 'discord_login', 'width=500,height=750');
+    } catch (err: any) {
+      console.error("Discord Login URL Error:", err);
+      setError(`Failed to start Discord login: ${err.message}`);
       setLoading(false);
     }
   };
@@ -142,14 +199,26 @@ const Login = () => {
           </div>
         </div>
 
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-slate-100 transition-all mb-6"
-        >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-5 h-5" />
-          Google
-        </button>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <button
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-5 h-5" />
+            Google
+          </button>
+          <button
+            onClick={handleDiscordLogin}
+            disabled={loading}
+            className="py-3 bg-[#5865F2] text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#4752C4] transition-all"
+          >
+            <svg width="20" height="20" viewBox="0 0 127.14 96.36" fill="currentColor">
+              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.71,32.65-1.78,56.63.48,80.21a105.73,105.73,0,0,0,32.21,16.15c2.54-3.45,4.8-7.14,6.68-11a68.11,68.11,0,0,1-10.65-5.1c.91-.66,1.8-1.35,2.66-2.07a75.28,75.28,0,0,0,64.32,0c.86.72,1.75,1.41,2.66,2.07a67.89,67.89,0,0,1-10.65,5.1c1.88,3.82,4.14,7.51,6.68,11a105.73,105.73,0,0,0,32.21-16.15C129.58,50.49,125.1,26.54,107.7,8.07ZM42.45,65.69c-6.22,0-11.38-5.71-11.38-12.73s5-12.73,11.38-12.73,11.38,5.71,11.38,12.73S48.67,65.69,42.45,65.69Zm42.24,0c-6.22,0-11.38-5.71-11.38-12.73s5-12.73,11.38-12.73,11.38,5.71,11.38,12.73S84.69,65.69,84.24,65.69Z"/>
+            </svg>
+            Discord
+          </button>
+        </div>
 
         <p className="text-center text-sm text-muted">
           {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}

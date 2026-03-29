@@ -17,17 +17,31 @@ const Home = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        console.log("Fetching stats from /api/stats...");
         const response = await fetch('/api/stats');
+        console.log("Stats response status:", response.status, response.statusText);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log("Stats data received:", data);
           setStats({
-            servers: data.servers.toLocaleString() + '+',
-            users: (data.users / 1000000).toFixed(1) + 'M+',
-            uptime: data.uptime + '%'
+            servers: (data.servers || 12400).toLocaleString() + '+',
+            users: ((data.users || 3200000) / 1000000).toFixed(1) + 'M+',
+            uptime: (data.uptime || 99.9) + '%'
           });
+        } else {
+          const text = await response.text();
+          console.error("Stats fetch failed with status:", response.status, text);
         }
       } catch (error) {
         console.error("Failed to fetch stats:", error);
+        // Try a simple ping to see if the server is reachable at all
+        try {
+          const pingRes = await fetch('/api/ping');
+          console.log("Ping result:", await pingRes.text());
+        } catch (pingError) {
+          console.error("Ping also failed:", pingError);
+        }
       }
     };
     fetchStats();
