@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required) - The unique identifier for the user.
+    //   - email: string (required) - The user's email address.
+    //   - displayName: string (optional) - The user's display name.
+    //   - photoURL: string (optional) - The user's profile photo URL.
+    //   - createdAt: timestamp (optional) - The timestamp when the profile was created.
+    //   - role: string (optional) - User role (admin/user).
+    //
+    // Collection: guilds
+    // Document ID: guildId (Discord Guild ID)
+    // Fields:
+    //   - id: string (required) - The Discord guild ID.
+    //   - name: string (required) - The name of the guild.
+    //   - icon: string (optional) - The icon URL or initials.
+    //   - ownerId: string (required) - The UID of the user who owns this guild.
+    //   - members: number (optional) - Number of members in the guild.
+    //   - active: bool (optional) - Whether the bot is active.
+    //
+    // Collection: guilds/{guildId}/settings
+    // Document ID: config
+    // Fields:
+    //   - prefix: string (required) - The command prefix.
+    //   - welcomeMessage: string (optional) - The welcome message.
+    //   - moderationEnabled: bool (optional) - Moderation status.
+    //   - musicEnabled: bool (optional) - Music status.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "tanakrit.k@kkumail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'role']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && isValidEmail(data.email);
+    }
+
+    function isValidGuild(data) {
+      return data.keys().hasAll(['id', 'name', 'ownerId']) &&
+             data.keys().hasOnly(['id', 'name', 'icon', 'ownerId', 'members', 'active']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.ownerId is string && data.ownerId.size() > 0;
+    }
+
+    function isValidBotSettings(data) {
+      return data.keys().hasAll(['prefix']) &&
+             data.keys().hasOnly(['prefix', 'welcomeMessage', 'moderationEnabled', 'musicEnabled']) &&
+             data.prefix is string && data.prefix.size() > 0 && data.prefix.size() < 10;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (!('role' in request.resource.data) || request.resource.data.role == 'user');
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
+                       request.resource.data.uid == resource.data.uid &&
+                       request.resource.data.email == resource.data.email &&
+                       (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)) || isAdmin();
+    }
+
+    match /guilds/{guildId} {
+      allow read: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidGuild(request.resource.data) && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin()) && isValidGuild(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      match /settings/config {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId == request.auth.uid || isAdmin());
+        allow write: if isAuthenticated() && (get(/databases/$(database)/documents/guilds/$(guildId)).data.ownerId == request.auth.uid || isAdmin()) && isValidBotSettings(request.resource.data);
+      }
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "The user's profile photo URL."
+        },
+        "discordAccessToken": {
+          "type": "string",
+          "description": "The user's Discord access token."
+        },
+        "discordRefreshToken": {
+          "type": "string",
+          "description": "The user's Discord refresh token."
+        },
+        "discordTokenExpiresAt": {
+          "type": "integer",
+          "description": "The timestamp when the Discord token expires."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the profile was created."
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Guild": {
+      "title": "Guild",
+      "description": "Discord server (guild) information.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The Discord guild ID."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the guild."
+        },
+        "icon": {
+          "type": "string",
+          "description": "The icon URL or initials."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns this guild in the dashboard."
+        },
+        "members": {
+          "type": "integer",
+          "description": "Number of members in the guild."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the bot is active in this guild."
+        }
+      },
+      "required": ["id", "name", "ownerId"]
+    },
+    "BotSettings": {
+      "title": "BotSettings",
+      "description": "Configuration settings for the bot in a specific guild.",
+      "type": "object",
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "The command prefix for the bot."
+        },
+        "welcomeMessage": {
+          "type": "string",
+          "description": "The message sent when a new member joins."
+        },
+        "moderationEnabled": {
+          "type": "boolean",
+          "description": "Whether moderation features are enabled."
+        },
+        "musicEnabled": {
+          "type": "boolean",
+          "description": "Whether music features are enabled."
+        }
+      },
+      "required": ["prefix"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of user profiles."
+    },
+    "/guilds/{guildId}": {
+      "schema": "Guild",
+      "description": "Collection of Discord guilds managed by the bot."
+    },
+    "/guilds/{guildId}/settings/config": {
+      "schema": "BotSettings",
+      "description": "Specific bot settings for a guild."
+    }
+  }
+}
