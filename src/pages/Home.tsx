@@ -16,9 +16,13 @@ const Home = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
       try {
         console.log("Fetching stats from /api/stats...");
-        const response = await fetch('/api/stats');
+        const response = await fetch('/api/stats', { signal: controller.signal });
+        clearTimeout(timeoutId);
         console.log("Stats response status:", response.status, response.statusText);
         
         if (response.ok) {
@@ -33,14 +37,20 @@ const Home = () => {
           const text = await response.text();
           console.error("Stats fetch failed with status:", response.status, text);
         }
-      } catch (error) {
-        console.error("Failed to fetch stats:", error);
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.error("Stats fetch timed out after 8s");
+        } else {
+          console.error("Failed to fetch stats:", error);
+        }
+        
         // Try a simple ping to see if the server is reachable at all
         try {
-          const pingRes = await fetch('/api/ping');
+          const pingRes = await fetch('/api/ping', { signal: AbortSignal.timeout(3000) });
           console.log("Ping result:", await pingRes.text());
         } catch (pingError) {
-          console.error("Ping also failed:", pingError);
+          console.error("Ping also failed or timed out:", pingError);
         }
       }
     };
@@ -104,49 +114,49 @@ const Home = () => {
       color: "bg-blue-500/10"
     },
     {
-      icon: <Music className="text-green-400" />,
+      icon: <Music className="text-blue-400" />,
       title: "Music Player",
       desc: {
         th: "เปิดเพลงจาก YouTube, Spotify และ SoundCloud พร้อม queue และ equalizer",
         en: "Play music from YouTube, Spotify & SoundCloud with queue and equalizer."
       },
-      color: "bg-green-500/10"
+      color: "bg-blue-500/10"
     },
     {
-      icon: <Star className="text-yellow-400" />,
+      icon: <Star className="text-blue-400" />,
       title: "Leveling System",
       desc: {
         th: "ระบบ XP และ rank card สวยงาม กระตุ้นให้สมาชิก engage กับเซิร์ฟเวอร์มากขึ้น",
         en: "XP system with beautiful rank cards to keep members engaged."
       },
-      color: "bg-yellow-500/10"
+      color: "bg-blue-500/10"
     },
     {
-      icon: <Gift className="text-pink-400" />,
+      icon: <Gift className="text-blue-400" />,
       title: "Giveaway",
       desc: {
         th: "จัดกิจกรรมแจกของรางวัลได้ง่ายๆ ตั้ง timer และสุ่มผู้ชนะอัตโนมัติ",
         en: "Easily set up giveaways with timers and automatic winner selection."
       },
-      color: "bg-pink-500/10"
+      color: "bg-blue-500/10"
     },
     {
-      icon: <BarChart3 className="text-sky-400" />,
+      icon: <BarChart3 className="text-blue-400" />,
       title: "Statistics",
       desc: {
         th: "ดูสถิติเซิร์ฟเวอร์แบบละเอียด สมาชิกใหม่ ข้อความ และกิจกรรมต่างๆ",
         en: "Detailed server stats: new members, messages, and activity."
       },
-      color: "bg-sky-500/10"
+      color: "bg-blue-500/10"
     },
     {
-      icon: <Users className="text-purple-400" />,
+      icon: <Users className="text-blue-400" />,
       title: "Role Management",
       desc: {
         th: "ระบบ reaction roles และ auto-role ปรับแต่งบทบาทสมาชิกได้อย่างยืดหยุ่น",
         en: "Reaction roles and auto-role for flexible member management."
       },
-      color: "bg-purple-500/10"
+      color: "bg-blue-500/10"
     }
   ];
 
@@ -177,7 +187,7 @@ const Home = () => {
             <a href="#" className="px-3 py-1.5 text-sm font-medium text-muted hover:text-white hover:bg-surf2 rounded-lg transition-colors">Status</a>
             <a href="#" className="px-3 py-1.5 text-sm font-medium text-muted hover:text-white hover:bg-surf2 rounded-lg transition-colors">Commands</a>
             <div className="ml-2">
-              <span className="bg-gradient-to-br from-orange-400 to-orange-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-[0_0_14px_rgba(245,166,35,0.35)]">
+              <span className="bg-gradient-to-br from-blue-400 to-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-[0_0_14px_rgba(88,101,242,0.35)]">
                 ✦ Premium
               </span>
             </div>
@@ -318,7 +328,7 @@ const Home = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-6xl md:text-8xl font-black font-heading tracking-tighter mb-4 bg-gradient-to-br from-white via-blue-200 to-accent2 bg-clip-text text-transparent"
+          className="text-6xl md:text-8xl font-black font-heading tracking-tighter mb-4 bg-gradient-to-br from-white via-blue-200 to-blue-500 bg-clip-text text-transparent"
         >
           Arvid
         </motion.h1>

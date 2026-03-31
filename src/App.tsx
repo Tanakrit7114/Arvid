@@ -2,11 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
-import ManageServer from './pages/ManageServer';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import ManageGuild from './pages/ManageGuild';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -35,18 +35,18 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route 
-              path="/dashboard" 
+              path="/manage/:guildId" 
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <ManageGuild />   {/* เปลี่ยนจาก ManageServer */}
                 </ProtectedRoute>
               } 
             />
             <Route 
-              path="/manage/:guildId" 
+              path="/dashboard" 
               element={
                 <ProtectedRoute>
-                  <ManageServer />
+                  <Dashboard />
                 </ProtectedRoute>
               } 
             />
